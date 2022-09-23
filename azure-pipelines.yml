@@ -6,38 +6,61 @@ pool:
 #Your build pipeline references an undefined variable named ‘Parameters.TestProjects’. Create or edit the build pipeline for this YAML file, define the variable on the Variables tab. See https://go.microsoft.com/fwlink/?linkid=865972
 #Your build pipeline references the ‘BuildConfiguration’ variable, which you’ve selected to be settable at queue time. Create or edit the build pipeline for this YAML file, define the variable on the Variables tab, and then select the option to make it settable at queue time. See https://go.microsoft.com/fwlink/?linkid=865971
 #Your build pipeline references the ‘BuildConfiguration’ variable, which you’ve selected to be settable at queue time. Create or edit the build pipeline for this YAML file, define the variable on the Variables tab, and then select the option to make it settable at queue time. See https://go.microsoft.com/fwlink/?linkid=865971
+stages:
 
-steps:
-- task: DotNetCoreCLI@2
-  displayName: Restore
-  inputs:
-    command: restore
-    projects: '**/*.csproj'
+  - stage: 'Restore'
+    displayName: 'Restore'
+    jobs:
+      - job: restore
+        steps:
+        - task: DotNetCoreCLI@2
+          displayName: Restore
+          inputs:
+            command: 'restore'
+#            projects: '$(Parameters.RestoreBuildProjects)'
+            projects: '**/*.csproj'
 
-- task: DotNetCoreCLI@2
-  displayName: Build
-  inputs:
-    projects: '**/*.csproj'
-    arguments: '--configuration $(BuildConfiguration)'
+  - stage: 'Build'
+    displayName: 'Build'
+    jobs:
+      - job: build
+        steps:
+        - task: DotNetCoreCLI@2
+          displayName: Build
+          inputs:
+            projects: '**/*.csproj'
+            arguments: '--configuration $(BuildConfiguration)'
 
-- task: DotNetCoreCLI@2
-  displayName: Test
-  inputs:
-    command: test
-    projects: '$(Parameters.TestProjects)'
-    arguments: '--configuration $(BuildConfiguration)'
 
-- task: DotNetCoreCLI@2
-  displayName: Publish
-  inputs:
-    command: publish
-    publishWebProjects: True
-    arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
-    zipAfterPublish: True
+  - stage: 'Test'
+    displayName: 'Test'
+    jobs:
+      - job: test
+        steps:
+        - task: DotNetCoreCLI@2
+          displayName: Test
+          inputs:
+            command: 'test'
+            projects: '**/*[Tt]ests/*.csproj'
+            arguments: '--configuration $(BuildConfiguration)'
 
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish Artifact'
-  inputs:
-    PathtoPublish: '$(build.artifactstagingdirectory)'
-  condition: succeededOrFailed()
+  - stage: 'Publish'
+    displayName: 'Publish'
+    jobs:
+      - job: publish
+        steps:
+        - task: DotNetCoreCLI@2
+          displayName: Publish
+          inputs:
+            command: 'publish'
+            publishWebProjects: True
+            arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
+            zipAfterPublish: True
+      - job: publishToPath
+        steps:
+        - task: PublishBuildArtifacts@1
+          displayName: 'Publish Artifact'
+          inputs:
+            PathtoPublish: '$(build.artifactstagingdirectory)'
+          condition: succeededOrFailed()
 
